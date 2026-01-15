@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wema Electronic - Inventory & Sales</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0ea5a4;--danger:#ef4444}
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{margin:0;background:var(--bg);color:#0f172a;padding:24px}
+    .container{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(2,6,23,0.06)}
+    form.grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+    label{font-size:12px;color:var(--muted)}
+    input,select{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+    .btn-primary{background:var(--accent);color:white}
+    .btn-ghost{background:transparent;border:1px solid #e6edf3}
+    .toolbar{display:flex;gap:8px;align-items:center}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left;font-size:14px}
+    th{font-size:12px;color:var(--muted)}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:12px}
+    .actions button{margin-right:6px}
+    .danger{background:var(--danger);color:white}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#ecfeff;font-size:12px}
+    .flex{display:flex;align-items:center}
+    .space{height:12px}
+    .summary{display:flex;gap:12px}
+    .summary .item{flex:1}
+    .right{display:flex;gap:8px}
+    @media(max-width:900px){form.grid{grid-template-columns:1fr 1fr}header{flex-direction:column;align-items:flex-start} .summary{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Wema Electronic — Inventory & Sales</h1>
+        <div class="muted">Simple offline inventory manager built with HTML/JS (localStorage)</div>
+      </div>
+      <div class="toolbar">
+        <button id="exportCsv" class="btn btn-ghost">Export CSV</button>
+        <button id="clearData" class="btn btn-ghost">Reset Data</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <strong>Add / Update Product</strong>
+      <form id="productForm" class="grid" onsubmit="return false;">
+        <div>
+          <label>Product name</label>
+          <input id="name" required placeholder="e.g., Samsung A54" />
+        </div>
+        <div>
+          <label>SKU (unique)</label>
+          <input id="sku" placeholder="e.g., SAM-A54-001" />
+        </div>
+        <div>
+          <label>Category</label>
+          <input id="category" placeholder="Phones, Wearable, Electrical Accessories, Phones Accessories" />
+        </div>
+        <div>
+          <label>Unit price (KES)</label>
+          <input id="price" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div>
+          <label>Quantity</label>
+          <input id="quantity" type="number" min="0" step="1" />
+        </div>
+        <div>
+          <label>Minimum reorder level</label>
+          <input id="reorder" type="number" min="0" step="1" placeholder="5" />
+        </div>
+        <div style="grid-column:1/5;display:flex;gap:8px;margin-top:6px">
+          <button id="saveProduct" class="btn btn-primary">Save product</button>
+          <button id="clearForm" class="btn btn-ghost">Clear</button>
+          <div class="muted small" style="align-self:center">Tip: leave SKU empty to auto-generate one</div>
+        </div>
+      </form>
+    </section>
+
+    <div class="space"></div>
+
+    <section class="card">
+      <div class="flex" style="justify-content:space-between;align-items:flex-end">
+        <div>
+          <strong>Inventory</strong>
+          <div class="muted small">Search, edit quantities and record sales</div>
+        </div>
+        <div class="right">
+          <input id="search" placeholder="Search by name, SKU, category" />
+          <select id="filterLow">
+            <option value="all">All items</option>
+            <option value="low">Low stock only</option>
+          </select>
+        </div>
+      </div>
+
+      <table id="productsTable" class="small">
+        <thead>
+          <tr><th>SKU</th><th>Product</th><th>Category</th><th>Price</th><th>Qty</th><th>Reorder</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="space"></div>
+      <strong>Sales history</strong>
+      <table id="salesTable" class="small">
+        <thead><tr><th>Date</th><th>SKU</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <div class="space"></div>
+
+    <section class="summary">
+      <div class="card item">
+        <div class="muted">Total products</div>
+        <div id="totalProducts">0</div>
+      </div>
+      <div class="card item">
+        <div class="muted">Total stock units</div>
+        <div id="totalUnits">0</div>
+      </div>
+      <div class="card item">
+        <div class="muted">Total sales (KES)</div>
+        <div id="totalSales">0.00</div>
+      </div>
+    </section>
+
+    <div style="height:30px"></div>
+    <footer class="muted small">Built for Wema Electronic — offline first. Open this file in a browser. Data is stored locally in your browser (localStorage).</footer>
+  </div>
+
+<script>
+// Simple inventory manager using localStorage
+const LS_KEY = 'wema_inventory_v1';
+let db = { products: [], sales: [] };
+
+function saveDB(){ localStorage.setItem(LS_KEY, JSON.stringify(db)); render(); }
+function loadDB(){ const raw = localStorage.getItem(LS_KEY); if(raw) try{ db = JSON.parse(raw);}catch(e){console.error(e);} render(); }
+
+function uid(prefix='SKU'){ return prefix + '-' + Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+// UI elements
+const form = document.getElementById('productForm');
+const nameI = document.getElementById('name');
+const skuI = document.getElementById('sku');
+const catI = document.getElementById('category');
+const priceI = document.getElementById('price');
+const qtyI = document.getElementById('quantity');
+const reorderI = document.getElementById('reorder');
+const saveBtn = document.getElementById('saveProduct');
+const clearBtn = document.getElementById('clearForm');
+const tbody = document.querySelector('#productsTable tbody');
+const salesTbody = document.querySelector('#salesTable tbody');
+const searchI = document.getElementById('search');
+const filterLow = document.getElementById('filterLow');
+const totalProducts = document.getElementById('totalProducts');
+const totalUnits = document.getElementById('totalUnits');
+const totalSales = document.getElementById('totalSales');
+
+let editingSKU = null;
+
+function render(){
+  // products list
+  tbody.innerHTML='';
+  const q = (searchI.value||'').toLowerCase();
+  const lowOnly = filterLow.value === 'low';
+  let units=0, salesSum=0;
+
+  const filtered = db.products.filter(p => {
+    if(lowOnly && (p.quantity <= (p.reorder||0))) return true;
+    if(lowOnly) return false;
+    if(!q) return true;
+    return (p.name||'').toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q);
+  });
+
+  filtered.forEach(p => {
+    units += Number(p.quantity||0);
+    const tr = document.createElement('tr');
+    const low = p.reorder && p.quantity <= p.reorder;
+    tr.innerHTML = `
+      <td>${p.sku}</td>
+      <td><strong>${p.name}</strong><div class="muted small">${p.description||''}</div></td>
+      <td>${p.category||''}</td>
+      <td>${Number(p.price||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>${p.quantity} ${low?'<span class="badge">Low</span>':''}</td>
+      <td>${p.reorder||''}</td>
+      <td class="actions">
+        <button class="btn btn-ghost" onclick="startEdit('${p.sku}')">Edit</button>
+        <button class="btn btn-ghost" onclick="openAddStock('${p.sku}')">+Stock</button>
+        <button class="btn btn-primary" onclick="recordSalePrompt('${p.sku}')">Sell</button>
+        <button class="btn danger" onclick="deleteProduct('${p.sku}')">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // sales
+  salesTbody.innerHTML='';
+  db.sales.slice().reverse().forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${new Date(s.date).toLocaleString()}</td><td>${s.sku}</td><td>${s.name}</td><td>${s.qty}</td><td>${Number(s.unitPrice).toFixed(2)}</td><td>${(s.qty * s.unitPrice).toFixed(2)}</td>`;
+    salesTbody.appendChild(tr);
+    salesSum += s.qty * s.unitPrice;
+  });
+
+  totalProducts.textContent = db.products.length;
+  totalUnits.textContent = units;
+  totalSales.textContent = Number(salesSum).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// add/edit
+saveBtn.addEventListener('click', ()=>{
+  const name = nameI.value.trim();
+  let sku = skuI.value.trim() || uid('P');
+  const category = catI.value.trim();
+  const price = parseFloat(priceI.value) || 0;
+  const quantity = parseInt(qtyI.value) || 0;
+  const reorder = parseInt(reorderI.value) || 0;
+  if(!name){ alert('Enter product name'); return; }
+  if(editingSKU){ // update
+    const p = db.products.find(x=>x.sku===editingSKU);
+    if(!p) { alert('Product not found'); editingSKU=null; return; }
+    p.name=name; p.sku=sku; p.category=category; p.price=price; p.quantity=quantity; p.reorder=reorder;
+    editingSKU=null;
+  } else {
+    // prevent duplicate sku
+    if(db.products.find(x=>x.sku===sku)){
+      alert('SKU already exists — change it or leave blank to auto-generate'); return;
+    }
+    db.products.push({ sku, name, category, price, quantity, reorder });
+  }
+  clearForm(); saveDB();
+});
+
+clearBtn.addEventListener('click', ()=>{ clearForm(); });
+function clearForm(){ editingSKU=null; nameI.value=''; skuI.value=''; catI.value=''; priceI.value=''; qtyI.value=''; reorderI.value=''; saveBtn.textContent='Save product'; }
+
+function startEdit(sku){ const p = db.products.find(x=>x.sku===sku); if(!p) return; editingSKU = sku; nameI.value=p.name; skuI.value=p.sku; catI.value=p.category; priceI.value=p.price; qtyI.value=p.quantity; reorderI.value=p.reorder; saveBtn.textContent='Update product'; window.scrollTo({top:0,behavior:'smooth'}); }
+
+function deleteProduct(sku){ if(!confirm('Delete product?')) return; db.products = db.products.filter(x=>x.sku!==sku); saveDB(); }
+
+function openAddStock(sku){ const p = db.products.find(x=>x.sku===sku); if(!p) return; const add = parseInt(prompt('Add quantity to stock for '+p.name, '1')); if(!add || add<=0) return; p.quantity = Number(p.quantity) + Number(add); saveDB(); }
+
+function recordSalePrompt(sku){ const p = db.products.find(x=>x.sku===sku); if(!p) return; const qty = parseInt(prompt('Quantity to sell for '+p.name, '1')); if(!qty || qty<=0){ return; } if(qty > p.quantity){ if(!confirm('Selling more than existing stock. Continue?')) return; }
+  p.quantity = Number(p.quantity) - Number(qty);
+  const sale = { date: new Date().toISOString(), sku: p.sku, name: p.name, qty: qty, unitPrice: p.price };
+  db.sales.push(sale);
+  saveDB();
+}
+
+// search/filter
+searchI.addEventListener('input', render);
+filterLow.addEventListener('change', render);
+
+// export CSV
+function toCSV(){
+  const rows = [];
+  rows.push(['SKU','Name','Category','Price','Quantity','Reorder']);
+  db.products.forEach(p => rows.push([p.sku,p.name,p.category,p.price,p.quantity,p.reorder]));
+  return rows.map(r => r.map(v=> '"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+}
+
+document.getElementById('exportCsv').addEventListener('click', ()=>{
+  const csv = toCSV();
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='wema_inventory_products.csv'; a.click(); URL.revokeObjectURL(url);
+});
+
+// reset
+document.getElementById('clearData').addEventListener('click', ()=>{
+  if(confirm('Erase all local data (products & sales)?')){ localStorage.removeItem(LS_KEY); db = {products:[], sales:[]}; render(); }
+});
+
+// initial demo data if empty
+function seedIfEmpty(){ if(db.products.length===0 && db.sales.length===0){ db.products.push({sku:'P-001',name:'Samsung A54',category:'Phones',price:45000,quantity:5,reorder:2}); db.products.push({sku:'P-002',name:'Xiaomi Charger',category:'Accessories',price:1200,quantity:20,reorder:5}); db.sales.push({date:new Date().toISOString(),sku:'P-002',name:'Xiaomi Charger',qty:2,unitPrice:1200}); saveDB(); }}
+
+// load
+loadDB(); seedIfEmpty();
+
+// expose for manual testing in console
+window.wemaDB = db; window.saveWema = saveDB;
+</script>
+</body>
+</html>
